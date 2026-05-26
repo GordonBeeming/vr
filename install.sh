@@ -2,11 +2,11 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-bin_path="$repo_dir/.build/release/vr"
 service_name="VR Resize Video.workflow"
 service_dir="$HOME/Library/Services/$service_name"
 service_contents="$service_dir/Contents"
 install_bin_dir="$HOME/.local/bin"
+installed_bin_path="$install_bin_dir/vr"
 pbs_plist="$HOME/Library/Preferences/pbs.plist"
 service_status_key="(null) - VR Resize Video - runWorkflowAsService"
 
@@ -18,15 +18,20 @@ fi
 for tool in swift ffmpeg ffprobe; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "Missing dependency: $tool" >&2
-    echo "Install ffmpeg with: brew install ffmpeg" >&2
+    if [[ "$tool" == "swift" ]]; then
+      echo "Install Swift / Xcode Command Line Tools with: xcode-select --install" >&2
+    else
+      echo "Install ffmpeg with: brew install ffmpeg" >&2
+    fi
     exit 1
   fi
 done
 
 swift build -c release --package-path "$repo_dir"
+bin_path="$(swift build -c release --package-path "$repo_dir" --show-bin-path)/vr"
 
 mkdir -p "$install_bin_dir"
-ln -sfn "$bin_path" "$install_bin_dir/vr"
+ln -sfn "$bin_path" "$installed_bin_path"
 
 mkdir -p "$service_contents"
 
@@ -87,7 +92,7 @@ cat > "$service_contents/document.wflow" <<PLIST
         <key>ActionParameters</key>
         <dict>
           <key>COMMAND_STRING</key>
-          <string>"$bin_path" --dialog "\$@"</string>
+          <string>"$installed_bin_path" --dialog "\$@"</string>
           <key>CheckedForUserDefaultShell</key>
           <true/>
           <key>inputMethod</key>
@@ -295,18 +300,17 @@ PLIST
 
 plutil -lint "$service_contents/Info.plist" "$service_contents/document.wflow" >/dev/null
 
-if [[ -f "$pbs_plist" ]]; then
-  service_status_path=":NSServicesStatus:\"$service_status_key\""
-  /usr/libexec/PlistBuddy -c "Delete $service_status_path" "$pbs_plist" 2>/dev/null || true
-  /usr/libexec/PlistBuddy -c "Add $service_status_path dict" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:enabled_context_menu bool false" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:enabled_services_menu bool false" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes dict" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:ContextMenu bool false" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:FinderPreview bool true" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:ServicesMenu bool false" "$pbs_plist"
-  /usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:TouchBar bool true" "$pbs_plist"
-fi
+mkdir -p "$(dirname "$pbs_plist")"
+service_status_path=":NSServicesStatus:\"$service_status_key\""
+/usr/libexec/PlistBuddy -c "Delete $service_status_path" "$pbs_plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add $service_status_path dict" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:enabled_context_menu bool true" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:enabled_services_menu bool false" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes dict" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:ContextMenu bool true" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:FinderPreview bool true" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:ServicesMenu bool false" "$pbs_plist"
+/usr/libexec/PlistBuddy -c "Add $service_status_path:presentation_modes:TouchBar bool true" "$pbs_plist"
 
 if [[ -x /System/Library/CoreServices/pbs ]]; then
   /System/Library/CoreServices/pbs -flush || true

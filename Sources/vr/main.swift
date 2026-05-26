@@ -102,18 +102,26 @@ func run(_ command: String, _ arguments: [String], captureOutput: Bool = false) 
 
     let output = Pipe()
     let error = Pipe()
-    process.standardOutput = output
-    process.standardError = error
+    if captureOutput {
+        process.standardOutput = output
+        process.standardError = error
+    }
 
     try process.run()
-    process.waitUntilExit()
 
-    let outputText = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    let errorText = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    var outputText = ""
+    var errorText = ""
+    if captureOutput {
+        outputText = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        errorText = String(data: error.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    }
+
+    process.waitUntilExit()
 
     guard process.terminationStatus == 0 else {
         let details = (errorText.isEmpty ? outputText : errorText).trimmingCharacters(in: .whitespacesAndNewlines)
-        throw VRFailure.message(details.isEmpty ? "\(command) exited with \(process.terminationStatus)" : details)
+        let status = "\(command) exited with \(process.terminationStatus)"
+        throw VRFailure.message(details.isEmpty ? status : "\(status): \(details)")
     }
 
     return captureOutput ? outputText : ""
