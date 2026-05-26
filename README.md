@@ -126,16 +126,13 @@ Before opening a PR, run:
 
 ```bash
 swift build -c release
+ffmpeg -y -f lavfi -i testsrc=size=640x360:rate=15 -t 2 -pix_fmt yuv420p /tmp/vr-test.mp4
 "$(swift build -c release --show-bin-path)/vr" --list-presets
 "$(swift build -c release --show-bin-path)/vr" --estimate /tmp/vr-test.mp4
 ./install.sh
 ```
 
-To create a tiny test video:
-
-```bash
-ffmpeg -y -f lavfi -i testsrc=size=640x360:rate=15 -t 2 -pix_fmt yuv420p /tmp/vr-test.mp4
-```
+The `ffmpeg` command creates a tiny test video at `/tmp/vr-test.mp4`.
 
 To simulate Finder's reduced environment:
 
@@ -156,13 +153,13 @@ plutil -lint \
 Check the registered Services entry:
 
 ```bash
-/System/Library/CoreServices/pbs -dump | rg -n "VR Resize Video" -C 8
+/System/Library/CoreServices/pbs -dump | grep -A 8 -B 8 "VR Resize Video"
 ```
 
 Check Finder visibility settings:
 
 ```bash
-defaults read pbs NSServicesStatus | rg -n "VR Resize Video" -A 8
+defaults read pbs NSServicesStatus | grep -A 8 "VR Resize Video"
 ```
 
 If the Quick Action is missing or stale, rerun `./install.sh`. It regenerates the workflow, refreshes the Services cache, and restarts Finder.
