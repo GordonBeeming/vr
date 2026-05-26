@@ -87,12 +87,12 @@ swift build -c release
 Run from the repo without installing:
 
 ```bash
-.build/release/vr --list-presets
-.build/release/vr --estimate ~/Desktop/demo.mov
-.build/release/vr --preset half ~/Desktop/demo.mov
+"$(swift build -c release --show-bin-path)/vr" --list-presets
+"$(swift build -c release --show-bin-path)/vr" --estimate ~/Desktop/demo.mov
+"$(swift build -c release --show-bin-path)/vr" --preset half ~/Desktop/demo.mov
 ```
 
-On Apple Silicon, SwiftPM may place the executable under an architecture-specific path such as `.build/arm64-apple-macosx/release/vr`. For scripts, prefer:
+SwiftPM may place the executable under an architecture-specific path such as `.build/arm64-apple-macosx/release/vr`, so use `--show-bin-path` instead of hardcoding `.build/release/vr`.
 
 ```bash
 "$(swift build -c release --show-bin-path)/vr" --list-presets
